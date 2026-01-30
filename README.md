@@ -96,7 +96,21 @@ ngrok http 8000
    - **URL**: `https://your-ngrok-url.ngrok.io/voice/incoming-call`
    - **HTTP Method**: POST
 
-### 5. Test the System
+### 5. Configure SendGrid (Optional for Tier 3)
+
+For image upload functionality:
+1. Create a free SendGrid account at https://signup.sendgrid.com/
+2. Verify your sender email at Settings → Sender Authentication
+3. Create a "Full Access" API key at Settings → API Keys
+4. Add to `.env`:
+   ```
+   SENDGRID_API_KEY=SG.your_api_key_here
+   SENDGRID_FROM_EMAIL=your-verified@email.com
+   ```
+
+**Note for Demo:** The "From" email will be your verified personal email (e.g., `xingtaili1993@gmail.com`) with display name "Sears Home Services". In production, this would use an official `@sears.com` domain.
+
+### 6. Test the System
 
 Call your Twilio phone number and interact with the AI agent!
 
