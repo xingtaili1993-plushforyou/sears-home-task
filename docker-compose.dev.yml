@@ -1,0 +1,87 @@
+# SEARS Voice AI Diagnostic Agent - Development Docker Compose
+
+version: '3.8'
+
+services:
+  # Main Application (Development Mode)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sears-voice-ai-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/sears_voice_ai
+      - REDIS_URL=redis://redis:6379
+      - DEBUG=true
+      - ENVIRONMENT=development
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - .:/app
+      - ./uploads:/app/uploads
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+    networks:
+      - sears-network
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: sears-db-dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sears_voice_ai
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - sears-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: sears-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    restart: unless-stopped
+    networks:
+      - sears-network
+
+  # pgAdmin for database management (development only)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: sears-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@sears.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - sears-network
+
+volumes:
+  postgres_data_dev:
+  redis_data_dev:
+
+networks:
+  sears-network:
+    driver: bridge

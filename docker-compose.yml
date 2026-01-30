@@ -1,0 +1,84 @@
+# SEARS Voice AI Diagnostic Agent - Docker Compose Configuration
+
+version: '3.8'
+
+services:
+  # Main Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sears-voice-ai
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/sears_voice_ai
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+    networks:
+      - sears-network
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: sears-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sears_voice_ai
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - sears-network
+
+  # Redis (for session management in production)
+  redis:
+    image: redis:7-alpine
+    container_name: sears-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - sears-network
+
+  # Ngrok for exposing local server (development only)
+  # Uncomment this service when developing locally
+  # ngrok:
+  #   image: ngrok/ngrok:latest
+  #   container_name: sears-ngrok
+  #   environment:
+  #     - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+  #   command: http app:8000
+  #   ports:
+  #     - "4040:4040"
+  #   depends_on:
+  #     - app
+  #   networks:
+  #     - sears-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  sears-network:
+    driver: bridge
