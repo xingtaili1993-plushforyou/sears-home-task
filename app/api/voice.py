@@ -120,7 +120,10 @@ async def transfer_call(call_sid: str, request: Request):
     if session:
         summary = "; ".join(session.key_facts[-5:]) if session.key_facts else ""
 
-    logger.info(f"Transfer call {call_sid} to {department} (urgency={urgency})")
+    logger.info(
+        f"Transfer call {call_sid} to {department} "
+        f"(urgency={urgency}) summary={summary!r}"
+    )
 
     # In production, these would be real department phone numbers
     department_numbers = {
