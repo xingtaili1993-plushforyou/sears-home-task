@@ -194,17 +194,25 @@ def refresh_time_slots(db: Session) -> None:
     Called on every startup so the demo always has future availability.
     """
     today = date.today()
-    expired = db.query(TimeSlot).filter(
-        TimeSlot.date < today,
-        TimeSlot.is_available == True,
-    ).count()
+    expired = (
+        db.query(TimeSlot)
+        .filter(
+            TimeSlot.date < today,
+            TimeSlot.is_available == True,
+        )
+        .count()
+    )
 
     if expired == 0:
         # Check if there are any future available slots at all
-        future = db.query(TimeSlot).filter(
-            TimeSlot.date >= today,
-            TimeSlot.is_available == True,
-        ).count()
+        future = (
+            db.query(TimeSlot)
+            .filter(
+                TimeSlot.date >= today,
+                TimeSlot.is_available == True,
+            )
+            .count()
+        )
         if future > 0:
             return
 
@@ -219,11 +227,15 @@ def refresh_time_slots(db: Session) -> None:
     technicians = db.query(Technician).filter(Technician.is_active == True).all()
     for tech in technicians:
         # Only add if they don't already have future slots
-        existing_future = db.query(TimeSlot).filter(
-            TimeSlot.technician_id == tech.id,
-            TimeSlot.date >= today,
-            TimeSlot.is_available == True,
-        ).count()
+        existing_future = (
+            db.query(TimeSlot)
+            .filter(
+                TimeSlot.technician_id == tech.id,
+                TimeSlot.date >= today,
+                TimeSlot.is_available == True,
+            )
+            .count()
+        )
         if existing_future < 5:
             create_time_slots(db, tech)
 

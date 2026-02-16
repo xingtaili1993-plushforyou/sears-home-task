@@ -65,9 +65,7 @@ class RealtimeHandler:
             await twilio_ws.close()
             return
 
-        await self._broadcast(
-            {"type": "call_started", "call_sid": call_sid}
-        )
+        await self._broadcast({"type": "call_started", "call_sid": call_sid})
 
         try:
             await self._connect_to_openai()
@@ -91,9 +89,7 @@ class RealtimeHandler:
         except Exception as e:
             logger.error(f"Error in realtime handler: {str(e)}")
         finally:
-            await self._broadcast(
-                {"type": "call_ended", "call_sid": call_sid}
-            )
+            await self._broadcast({"type": "call_ended", "call_sid": call_sid})
             await self._cleanup()
 
     # ------------------------------------------------------------------
@@ -242,9 +238,7 @@ class RealtimeHandler:
                             "type": "transcript",
                             "role": "assistant",
                             "text": transcript,
-                            "call_sid": (
-                                self.session.call_sid if self.session else ""
-                            ),
+                            "call_sid": (self.session.call_sid if self.session else ""),
                         }
                     )
 
@@ -256,9 +250,7 @@ class RealtimeHandler:
                     logger.info(f"User: {transcript[:100]}...")
 
                     if self.session:
-                        self.session.add_fact(
-                            f"User said: {transcript[:200]}"
-                        )
+                        self.session.add_fact(f"User said: {transcript[:200]}")
                         self.session.update_interaction()
 
                     await self._broadcast(
@@ -266,9 +258,7 @@ class RealtimeHandler:
                             "type": "transcript",
                             "role": "user",
                             "text": transcript,
-                            "call_sid": (
-                                self.session.call_sid if self.session else ""
-                            ),
+                            "call_sid": (self.session.call_sid if self.session else ""),
                         }
                     )
 
@@ -276,9 +266,7 @@ class RealtimeHandler:
                     await self._handle_tool_call(event, twilio_ws)
 
                 elif event_type == "error":
-                    logger.error(
-                        f"OpenAI error: {event.get('error', {})}"
-                    )
+                    logger.error(f"OpenAI error: {event.get('error', {})}")
 
                 elif event_type == "session.created":
                     logger.info("OpenAI session created")
@@ -309,24 +297,18 @@ class RealtimeHandler:
                     "type": "tool_call",
                     "tool": name,
                     "arguments": arguments,
-                    "call_sid": (
-                        self.session.call_sid if self.session else ""
-                    ),
+                    "call_sid": (self.session.call_sid if self.session else ""),
                 }
             )
 
-            result = await self.agent.execute_tool(
-                name, arguments, self.session
-            )
+            result = await self.agent.execute_tool(name, arguments, self.session)
 
             await self._broadcast(
                 {
                     "type": "tool_result",
                     "tool": name,
                     "result": result,
-                    "call_sid": (
-                        self.session.call_sid if self.session else ""
-                    ),
+                    "call_sid": (self.session.call_sid if self.session else ""),
                 }
             )
 

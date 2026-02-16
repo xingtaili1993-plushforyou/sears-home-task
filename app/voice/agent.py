@@ -6,7 +6,12 @@ from typing import Any, Dict, List, Optional
 from app.config import settings
 from app.database import get_db_context
 from app.schemas.conversation import ConversationState
-from app.services import CustomerService, DiagnosticService, ImageService, SchedulingService
+from app.services import (
+    CustomerService,
+    DiagnosticService,
+    ImageService,
+    SchedulingService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -191,9 +196,7 @@ class VoiceAgent:
                         },
                         "appliance_type": {
                             "type": "string",
-                            "description": (
-                                "The type of appliance that needs service"
-                            ),
+                            "description": ("The type of appliance that needs service"),
                         },
                         "preferred_time": {
                             "type": "string",
@@ -266,9 +269,7 @@ class VoiceAgent:
                         },
                         "appliance_type": {
                             "type": "string",
-                            "description": (
-                                "The type of appliance to photograph"
-                            ),
+                            "description": ("The type of appliance to photograph"),
                         },
                         "specific_area": {
                             "type": "string",
@@ -375,9 +376,7 @@ class VoiceAgent:
                         },
                         "summary_notes": {
                             "type": "string",
-                            "description": (
-                                "Key points to include in the summary"
-                            ),
+                            "description": ("Key points to include in the summary"),
                         },
                     },
                     "required": ["email"],
@@ -458,9 +457,7 @@ class VoiceAgent:
             elif tool_name == "request_image_upload":
                 return await self._request_image(
                     arguments["email"],
-                    arguments.get(
-                        "appliance_type", session.diagnostic.appliance_type
-                    ),
+                    arguments.get("appliance_type", session.diagnostic.appliance_type),
                     arguments.get("specific_area"),
                     session,
                 )
@@ -491,9 +488,7 @@ class VoiceAgent:
     # Existing tool implementations
     # ------------------------------------------------------------------
 
-    async def _get_troubleshooting(
-        self, appliance_type: str, symptom: str
-    ) -> str:
+    async def _get_troubleshooting(self, appliance_type: str, symptom: str) -> str:
         """Get troubleshooting steps for an issue."""
         steps = self.diagnostic_service.get_troubleshooting_steps(
             appliance_type, symptom
@@ -529,9 +524,7 @@ class VoiceAgent:
             slots = scheduling_service.get_available_slots(
                 zip_code=zip_code,
                 appliance_type=normalized,
-                time_preference=(
-                    preferred_time if preferred_time != "any" else None
-                ),
+                time_preference=(preferred_time if preferred_time != "any" else None),
             )
             if not slots:
                 return (
@@ -552,10 +545,7 @@ class VoiceAgent:
                     f"Slot {slot.slot_id}: {d} from {s} to {e} "
                     f"with {slot.technician_name}"
                 )
-            return (
-                f"Available appointments in {zip_code}:\n"
-                + "\n".join(descs)
-            )
+            return f"Available appointments in {zip_code}:\n" + "\n".join(descs)
 
     async def _book_appointment(
         self,
@@ -634,9 +624,7 @@ class VoiceAgent:
                 issue_description=session.diagnostic.primary_symptom,
                 call_sid=session.call_sid,
             )
-            upload_url = image_service.get_upload_url(
-                upload_request.upload_token
-            )
+            upload_url = image_service.get_upload_url(upload_request.upload_token)
 
             session.image_upload_requested = True
             session.image_upload_token = upload_request.upload_token

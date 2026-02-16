@@ -281,9 +281,7 @@ class EmailService:
         # Build key-facts section (filter out raw transcripts)
         facts_html = ""
         if key_facts:
-            filtered = [
-                f for f in key_facts if not f.startswith("User said:")
-            ]
+            filtered = [f for f in key_facts if not f.startswith("User said:")]
             if filtered:
                 facts_li = "".join(f"<li>{f}</li>" for f in filtered[:10])
                 facts_html = f"""
@@ -345,9 +343,7 @@ class EmailService:
         """
 
         if not self.api_key:
-            logger.warning(
-                f"Would send call summary email to {to_email}"
-            )
+            logger.warning(f"Would send call summary email to {to_email}")
             return True
 
         try:
@@ -365,9 +361,7 @@ class EmailService:
             if response.status_code in [200, 201, 202]:
                 logger.info(f"Call summary email sent to {to_email}")
                 return True
-            logger.error(
-                f"Call summary email failed: {response.status_code}"
-            )
+            logger.error(f"Call summary email failed: {response.status_code}")
             return False
 
         except Exception as e:
@@ -441,9 +435,7 @@ class EmailService:
         """
 
         if not self.api_key:
-            logger.warning(
-                f"Would send image analysis email to {to_email}"
-            )
+            logger.warning(f"Would send image analysis email to {to_email}")
             return True
 
         try:
@@ -459,17 +451,11 @@ class EmailService:
             )
             response = sg.send(message)
             if response.status_code in [200, 201, 202]:
-                logger.info(
-                    f"Image analysis email sent to {to_email}"
-                )
+                logger.info(f"Image analysis email sent to {to_email}")
                 return True
-            logger.error(
-                f"Image analysis email failed: {response.status_code}"
-            )
+            logger.error(f"Image analysis email failed: {response.status_code}")
             return False
 
         except Exception as e:
-            logger.error(
-                f"Error sending image analysis email: {str(e)}"
-            )
+            logger.error(f"Error sending image analysis email: {str(e)}")
             return False

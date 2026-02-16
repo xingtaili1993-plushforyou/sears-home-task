@@ -74,9 +74,7 @@ class SMSService:
                 from_=self.from_number,
                 to=to_phone,
             )
-            logger.info(
-                f"SMS sent to {to_phone} — SID: {message.sid}"
-            )
+            logger.info(f"SMS sent to {to_phone} — SID: {message.sid}")
             return True
 
         except ImportError:

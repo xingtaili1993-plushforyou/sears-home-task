@@ -107,7 +107,11 @@ async def transfer_call(call_sid: str, request: Request):
 
     Returns TwiML that bridges the caller to the support line.
     """
-    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    body = (
+        await request.json()
+        if request.headers.get("content-type") == "application/json"
+        else {}
+    )
     department = body.get("department", "general_support")
     urgency = body.get("urgency", "normal")
 
@@ -116,9 +120,7 @@ async def transfer_call(call_sid: str, request: Request):
     if session:
         summary = "; ".join(session.key_facts[-5:]) if session.key_facts else ""
 
-    logger.info(
-        f"Transfer call {call_sid} to {department} (urgency={urgency})"
-    )
+    logger.info(f"Transfer call {call_sid} to {department} (urgency={urgency})")
 
     # In production, these would be real department phone numbers
     department_numbers = {
