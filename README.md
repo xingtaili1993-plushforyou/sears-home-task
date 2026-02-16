@@ -1,276 +1,361 @@
 # SEARS Home Services - Voice AI Diagnostic Agent
 
-A sophisticated voice AI system that assists customers experiencing issues with their home appliances through natural phone conversations. The agent guides callers through diagnostic steps, provides troubleshooting guidance, and schedules technician visits when needed.
+A production-grade voice AI system that assists customers experiencing issues with their home appliances through natural phone conversations. The agent -- named **Samantha** -- guides callers through diagnostic steps, provides empathetic troubleshooting guidance, schedules technician visits, and follows up with email summaries and SMS confirmations.
 
-## 🎯 Features
+## Features
 
-### Tier 1: Core Functionality
-- **Natural Voice Conversations**: Real-time voice interaction using OpenAI's Realtime API
+### Core Voice AI
+- **Natural Voice Conversations**: Real-time voice interaction using OpenAI's Realtime API with low-latency audio streaming
+- **Warm, Empathetic Persona**: "Samantha" uses the shimmer voice for a natural, caring tone
 - **Appliance Identification**: Automatically identifies appliance types through conversation
-- **Symptom Collection**: Gathers relevant problem details, error codes, and symptoms
+- **Symptom Collection**: Gathers problem details, error codes, and symptoms
 - **Diagnostic Guidance**: Provides appliance-specific troubleshooting steps
-- **Conversation Memory**: Maintains context throughout the call
+- **Conversation Memory**: Maintains full context throughout the call
 
-### Tier 2: Technician Scheduling
+### Intelligent Scheduling
 - **Smart Matching**: Finds technicians by zip code and appliance specialty
-- **Real-time Availability**: Shows available appointment slots
+- **Real-time Availability**: Shows available appointment slots (auto-refreshed on startup)
 - **Automated Booking**: Books appointments with confirmation numbers
 - **Voice Confirmation**: Verbally confirms all appointment details
 
-### Tier 3: Visual Diagnosis
-- **Email Integration**: Sends upload links via email
+### Visual Diagnosis
+- **Email Integration**: Sends upload links via SendGrid
 - **Image Upload Portal**: Mobile-friendly image upload page
 - **Computer Vision Analysis**: Uses GPT-4 Vision for appliance diagnosis
-- **Enhanced Troubleshooting**: Provides specific guidance based on visual analysis
+- **Analysis Email**: Sends AI analysis results back to the customer
 
-## 🏗️ Architecture
+### World-Class Agent Upgrades (v2.0)
+- **Returning Customer Recognition**: Greets returning customers by name with history context
+- **Frustration Detection & Empathy**: Detects customer frustration and responds with de-escalation
+- **Human Escalation**: Seamless transfer to live agents with context handoff
+- **Post-Call Summary Email**: Professional HTML email summarizing the call, troubleshooting steps, and appointment details
+- **SMS Confirmations**: Sends text message appointment confirmations via Twilio
+- **Live Dashboard**: Real-time web dashboard showing transcript, tool calls, and sentiment
+- **Email/Phone Verification**: Spells back emails letter-by-letter and reads phone numbers in groups for accuracy
+
+## Architecture
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│                 │     │                 │     │                 │
-│   Phone Call    │────▶│     Twilio      │────▶│   FastAPI App   │
-│   (Customer)    │     │   (Telephony)   │     │   (Backend)     │
-│                 │◀────│                 │◀────│                 │
-└─────────────────┘     └─────────────────┘     └────────┬────────┘
-                                                         │
-                        ┌────────────────────────────────┼────────────────────────────────┐
-                        │                                │                                │
-                        ▼                                ▼                                ▼
-               ┌─────────────────┐             ┌─────────────────┐             ┌─────────────────┐
-               │                 │             │                 │             │                 │
-               │  OpenAI        │             │   PostgreSQL    │             │   SendGrid      │
-               │  Realtime API   │             │   (Database)    │             │   (Email)       │
-               │                 │             │                 │             │                 │
-               └─────────────────┘             └─────────────────┘             └─────────────────┘
+Phone Call ──▶ Twilio ──▶ ngrok (HTTPS) ──▶ EC2 / Local
+                                               │
+                                     ┌─────────┼─────────┐
+                                     │         │         │
+                                     ▼         ▼         ▼
+                                  FastAPI   PostgreSQL  Redis
+                                  :8000      :5432     :6379
+                                     │
+                    ┌────────────────┼────────────────┐
+                    │                │                │
+                    ▼                ▼                ▼
+              OpenAI Realtime   SendGrid (Email)  Twilio (SMS)
+              + GPT-4 Vision
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Docker and Docker Compose
 - Twilio Account (with phone number)
 - OpenAI API Key (with Realtime API access)
-- ngrok (for local development)
+- ngrok account (free tier works)
+- SendGrid API Key (optional, for email features)
 
 ### 1. Clone and Configure
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd sears-voice-ai
+git clone https://github.com/xingtaili1993-plushforyou/sears-home-task.git
+cd sears-home-task
 
-# Copy environment template
+# Copy environment template and fill in your credentials
 cp env.example.txt .env
-
-# Edit .env with your credentials
 ```
 
-### 2. Start with Docker
+### 2. Start with Docker Compose
 
 ```bash
-# Start all services
-docker-compose up -d
+docker compose up -d --build
 
-# View logs
-docker-compose logs -f app
+# Verify all services are running
+docker compose ps
+
+# Check logs
+docker compose logs -f app
 ```
 
-### 3. Expose Local Server (Development)
+### 3. Expose via ngrok
 
 ```bash
-# In a new terminal, start ngrok
 ngrok http 8000
 
-# Copy the https URL (e.g., https://abc123.ngrok.io)
-# Update BASE_URL in your .env file
-# Restart the app: docker-compose restart app
+# Copy the HTTPS URL and update BASE_URL in .env
+# Then restart: docker compose restart app
 ```
 
-### 4. Configure Twilio
+### 4. Configure Twilio Webhook
 
 1. Go to [Twilio Console](https://console.twilio.com)
-2. Navigate to Phone Numbers → Manage → Active Numbers
+2. Phone Numbers > Manage > Active Numbers
 3. Select your phone number
-4. Under "Voice & Fax", set:
+4. Under "Voice Configuration", set:
    - **A Call Comes In**: Webhook
-   - **URL**: `https://your-ngrok-url.ngrok.io/voice/incoming-call`
+   - **URL**: `https://your-ngrok-url/voice/incoming-call`
    - **HTTP Method**: POST
 
-### 5. Configure SendGrid (Optional for Tier 3)
+### 5. Test
 
-For image upload functionality:
-1. Create a free SendGrid account at https://signup.sendgrid.com/
-2. Verify your sender email at Settings → Sender Authentication
-3. Create a "Full Access" API key at Settings → API Keys
-4. Add to `.env`:
-   ```
-   SENDGRID_API_KEY=SG.your_api_key_here
-   SENDGRID_FROM_EMAIL=your-verified@email.com
-   ```
+Call your Twilio phone number and talk to Samantha!
 
-**Note for Demo:** The "From" email will be your verified personal email (e.g., `xingtaili1993@gmail.com`) with display name "Sears Home Services". In production, this would use an official `@sears.com` domain.
+## EC2 Deployment
 
-### 6. Test the System
+The application is deployed on AWS EC2 for production use.
 
-Call your Twilio phone number and interact with the AI agent!
+### Infrastructure
+- **Instance**: t3.medium (2 vCPU, 4 GiB RAM), Ubuntu 24.04 LTS
+- **Storage**: 30 GiB gp3
+- **HTTPS**: ngrok tunnel with static domain
+- **Containers**: Docker Compose (app + PostgreSQL + Redis)
 
-## 📁 Project Structure
+### Deploy to EC2
+
+```bash
+# SSH into your EC2 instance
+ssh -i your-key.pem ubuntu@<EC2-PUBLIC-IP>
+
+# Install Docker
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker ubuntu
+newgrp docker
+
+# Install ngrok
+curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
+  | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null \
+  && echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
+  | sudo tee /etc/apt/sources.list.d/ngrok.list \
+  && sudo apt update && sudo apt install ngrok
+
+# Clone, configure, and start
+git clone https://github.com/xingtaili1993-plushforyou/sears-home-task.git
+cd sears-home-task
+nano .env  # Add your credentials
+docker compose up -d --build
+
+# Start ngrok in a screen session
+ngrok config add-authtoken <YOUR_TOKEN>
+screen -dmS ngrok ngrok http 8000 --domain=your-domain.ngrok-free.app
+```
+
+### Verify Deployment
+- Root: `https://your-domain.ngrok-free.app/`
+- Health: `https://your-domain.ngrok-free.app/api/health`
+- Dashboard: `https://your-domain.ngrok-free.app/dashboard`
+- API Docs: `https://your-domain.ngrok-free.app/docs`
+
+## Project Structure
 
 ```
-sears-voice-ai/
+sears-home-task/
 ├── app/
-│   ├── __init__.py
-│   ├── main.py              # FastAPI application entry point
-│   ├── config.py            # Configuration management
-│   ├── database.py          # Database connection
-│   ├── seed_data.py         # Sample data for technicians
+│   ├── main.py                  # FastAPI application entry point
+│   ├── config.py                # Configuration management
+│   ├── database.py              # Database connection
+│   ├── seed_data.py             # Seed data with auto time-slot refresh
 │   ├── api/
-│   │   ├── __init__.py
-│   │   ├── routes.py        # REST API endpoints
-│   │   ├── voice.py         # Twilio voice webhooks
-│   │   └── upload.py        # Image upload endpoints
+│   │   ├── routes.py            # REST API endpoints
+│   │   ├── voice.py             # Twilio voice webhooks + transfer
+│   │   ├── upload.py            # Image upload endpoints
+│   │   └── dashboard.py         # Live dashboard page + WebSocket
 │   ├── models/
-│   │   ├── __init__.py
-│   │   ├── base.py          # SQLAlchemy base
-│   │   ├── technician.py    # Technician models
-│   │   ├── availability.py  # Scheduling models
-│   │   └── customer.py      # Customer models
+│   │   ├── base.py              # SQLAlchemy base
+│   │   ├── technician.py        # Technician models
+│   │   ├── availability.py      # Scheduling models
+│   │   └── customer.py          # Customer models
 │   ├── schemas/
-│   │   ├── __init__.py
-│   │   ├── technician.py    # Technician schemas
-│   │   ├── appointment.py   # Appointment schemas
-│   │   ├── customer.py      # Customer schemas
-│   │   └── conversation.py  # Conversation state
+│   │   ├── technician.py        # Technician schemas
+│   │   ├── appointment.py       # Appointment schemas
+│   │   ├── customer.py          # Customer schemas
+│   │   └── conversation.py      # Conversation state
 │   ├── services/
-│   │   ├── __init__.py
 │   │   ├── technician_service.py
 │   │   ├── scheduling_service.py
-│   │   ├── customer_service.py
+│   │   ├── customer_service.py  # Includes customer history lookup
 │   │   ├── diagnostic_service.py
-│   │   ├── email_service.py
-│   │   └── image_service.py
+│   │   ├── email_service.py     # Call summary + image analysis emails
+│   │   ├── image_service.py
+│   │   └── sms_service.py       # SMS confirmations via Twilio
 │   └── voice/
-│       ├── __init__.py
-│       ├── session_manager.py  # Conversation state management
-│       ├── agent.py            # AI agent with tools
-│       └── realtime_handler.py # OpenAI Realtime API handler
-├── uploads/                 # Uploaded images
-├── docker-compose.yml       # Production Docker config
-├── docker-compose.dev.yml   # Development Docker config
+│       ├── session_manager.py   # Conversation state management
+│       ├── agent.py             # AI agent (Samantha) with 8 tools
+│       └── realtime_handler.py  # OpenAI Realtime API + dashboard broadcast
+├── tests/
+│   ├── test_voice_agent.py      # Agent tool tests
+│   ├── test_services.py         # Service layer tests
+│   ├── test_api.py              # API endpoint tests
+│   └── ...
+├── .github/
+│   └── workflows/
+│       └── ci.yml               # CI pipeline (lint + test + Docker build)
+├── docker-compose.yml
 ├── Dockerfile
 ├── requirements.txt
-├── env.example.txt
-└── README.md
+├── pyproject.toml               # Black, isort, pytest config
+├── .flake8                      # Flake8 config
+└── Makefile
 ```
 
-## 🔧 API Endpoints
+## API Endpoints
 
 ### Voice
-- `POST /voice/incoming-call` - Twilio webhook for incoming calls
-- `POST /voice/call-status` - Call status updates
-- `WS /voice/media-stream/{call_sid}` - WebSocket for audio streaming
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/voice/incoming-call` | Twilio webhook for incoming calls |
+| POST | `/voice/call-status` | Call status updates |
+| WS | `/voice/media-stream/{call_sid}` | WebSocket for audio streaming |
+| POST | `/voice/transfer/{call_sid}` | Transfer call to human agent |
+
+### Dashboard
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/dashboard` | Live conversation dashboard |
+| WS | `/dashboard/ws` | Dashboard WebSocket feed |
 
 ### Scheduling
-- `GET /api/availability` - Get available appointment slots
-- `POST /api/appointments` - Book an appointment
-- `GET /api/appointments/{id}` - Get appointment details
-- `DELETE /api/appointments/{id}` - Cancel appointment
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/availability` | Get available appointment slots |
+| POST | `/api/appointments` | Book an appointment |
+| GET | `/api/appointments/{id}` | Get appointment details |
+| DELETE | `/api/appointments/{id}` | Cancel appointment |
 
 ### Technicians
-- `GET /api/technicians` - List all technicians
-- `GET /api/technicians/search/by-criteria` - Search by zip/specialty
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/technicians` | List all technicians |
+| GET | `/api/technicians/search/by-criteria` | Search by zip/specialty |
 
 ### Image Upload
-- `POST /image-upload-request` - Create upload request
-- `GET /upload/{token}` - Upload page
-- `POST /upload/{token}/submit` - Submit image
-- `GET /upload/{token}/analysis` - Get image analysis
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/image-upload-request` | Create upload request |
+| GET | `/upload/{token}` | Upload page |
+| POST | `/upload/{token}/submit` | Submit image |
+| GET | `/upload/{token}/analysis` | Get image analysis |
 
 ### Diagnostics
-- `GET /api/diagnostics/appliances` - List supported appliances
-- `GET /api/diagnostics/{type}/symptoms` - Get common symptoms
-- `POST /api/diagnostics/{type}/troubleshoot` - Get troubleshooting steps
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/diagnostics/appliances` | List supported appliances |
+| GET | `/api/diagnostics/{type}/symptoms` | Get common symptoms |
+| POST | `/api/diagnostics/{type}/troubleshoot` | Get troubleshooting steps |
 
-## 🗄️ Database Schema
+## AI Agent Tools
 
-### Technicians
-- Personal info (name, email, phone)
-- Employment details (employee_id, experience)
-- Specialties (appliance types)
-- Service areas (zip codes)
+The voice agent (Samantha) has 8 tools available during calls:
 
-### Time Slots
-- Available appointment windows
-- 2-hour windows (8-10, 10-12, 1-3, 3-5)
-- Linked to technicians
+| Tool | Description |
+|------|-------------|
+| `get_troubleshooting_steps` | Retrieve diagnostic steps for an appliance + symptom |
+| `check_technician_availability` | Search for available technicians by zip code |
+| `book_appointment` | Book a technician appointment |
+| `request_image_upload` | Send an image upload link to the customer's email |
+| `update_customer_info` | Update customer name, email, or address |
+| `transfer_to_human` | Transfer the call to a live human agent |
+| `send_call_summary` | Email a post-call summary to the customer |
+| `send_sms_confirmation` | Send an SMS appointment confirmation |
 
-### Appointments
-- Links customer, technician, and time slot
-- Confirmation number
-- Status tracking
-- Issue details
+## CI/CD Pipeline
 
-### Customers
-- Contact information
-- Address details
-- Appointment history
+The project uses a full CI/CD pipeline via GitHub Actions (`.github/workflows/ci.yml`), triggered on every push and pull request to `main`.
 
-## 🛠️ Development
+### Pipeline Overview
 
-### Running Locally (without Docker)
-
-```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Set up PostgreSQL (or use SQLite for development)
-# Update DATABASE_URL in .env
-
-# Run the application
-uvicorn app.main:app --reload
+```
+git push to main
+       │
+       ▼
+  GitHub Actions
+       │
+       ├── Lint Job ──────────▶ black --check . (formatting)
+       │                        isort --check . (import ordering)
+       │                        flake8 (style / unused imports)
+       │
+       ├── Test Job ──────────▶ pytest --cov=app (unit tests + coverage)
+       │                        Uploads coverage-report artifact
+       │
+       └── Docker Build Job ──▶ docker build -t sears-voice-ai:test .
+                                Validates image builds successfully
 ```
 
-### Running Tests
+### CI Jobs Detail
+
+| Job | Runtime | What It Checks |
+|-----|---------|----------------|
+| **Lint** | ~25s | Code formatting (black), import order (isort), style rules (flake8) |
+| **Test** | ~35s | All unit tests with `pytest`, generates XML coverage report |
+| **Docker Build** | ~50s | Full Docker image build to catch dependency or build issues |
+
+All three jobs run in parallel on `ubuntu-latest` with Python 3.12.
+
+### Deployment to EC2
+
+After CI passes, deployment to the EC2 production server is done via SSH:
 
 ```bash
-pytest tests/ -v
+# SSH into EC2
+ssh -i your-key.pem ubuntu@<EC2-PUBLIC-IP>
+
+# Pull latest changes and rebuild
+cd sears-home-task
+git pull origin main
+docker compose down
+docker compose up -d --build
+
+# Verify
+docker compose ps
+curl http://localhost:8000/api/health
 ```
 
-### API Documentation
+### Code Quality Tools
 
-Once running, visit:
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+| Tool | Config File | Purpose |
+|------|-------------|---------|
+| black | `pyproject.toml` | Auto-formatting (line length 88) |
+| isort | `pyproject.toml` | Import sorting (black-compatible profile) |
+| flake8 | `.flake8` | Linting (max line 120, per-file ignores) |
+| pytest | `pyproject.toml` | Testing (async mode auto, verbose output) |
 
-## 📝 Environment Variables
+## Environment Variables
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `OPENAI_API_KEY` | OpenAI API key | Yes |
+| `OPENAI_API_KEY` | OpenAI API key (with Realtime API access) | Yes |
 | `TWILIO_ACCOUNT_SID` | Twilio Account SID | Yes |
 | `TWILIO_AUTH_TOKEN` | Twilio Auth Token | Yes |
 | `TWILIO_PHONE_NUMBER` | Your Twilio phone number | Yes |
 | `DATABASE_URL` | PostgreSQL connection string | Yes |
-| `BASE_URL` | Public URL for webhooks | Yes |
-| `SENDGRID_API_KEY` | SendGrid API key | No |
-| `OPENAI_VOICE` | TTS voice (alloy, nova, etc.) | No |
+| `BASE_URL` | Public HTTPS URL (ngrok URL) | Yes |
+| `SENDGRID_API_KEY` | SendGrid API key for emails | No |
+| `SENDGRID_FROM_EMAIL` | Verified sender email | No |
+| `OPENAI_VOICE` | TTS voice (default: shimmer) | No |
+| `REDIS_URL` | Redis connection string | No |
 
-## 🔒 Security Notes
+## Testing
 
-- Never commit `.env` files
+```bash
+# Run all tests with coverage
+pytest --cov=app --cov-report=term-missing -v
+
+# Run specific test file
+pytest tests/test_voice_agent.py -v
+```
+
+## Security Notes
+
+- Never commit `.env` files (it's in `.gitignore`)
 - Use environment variables for all secrets
-- Configure CORS appropriately in production
-- Use HTTPS for all webhooks
-- Validate all user inputs
+- On EC2, restrict `.env` permissions: `chmod 600 .env`
+- Use HTTPS (via ngrok) for all webhooks
+- Twilio webhook validation is enabled
 
-## 📄 License
+## License
 
-This project was created as a technical assessment. All work remains the intellectual property of the author.
-
-## 🤝 Support
-
-For questions about this implementation, please contact the author.
+This project was created as a technical assessment for Sears Home Services AI Engineer position.
