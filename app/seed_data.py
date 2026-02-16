@@ -188,6 +188,49 @@ def create_time_slots(
     return slots
 
 
+def refresh_time_slots(db: Session) -> None:
+    """
+    Remove expired time slots and create fresh ones for all technicians.
+    Called on every startup so the demo always has future availability.
+    """
+    today = date.today()
+    expired = db.query(TimeSlot).filter(
+        TimeSlot.date < today,
+        TimeSlot.is_available == True,
+    ).count()
+
+    if expired == 0:
+        # Check if there are any future available slots at all
+        future = db.query(TimeSlot).filter(
+            TimeSlot.date >= today,
+            TimeSlot.is_available == True,
+        ).count()
+        if future > 0:
+            return
+
+    print("Refreshing time slots with future dates...")
+    # Delete old unbooked slots
+    db.query(TimeSlot).filter(
+        TimeSlot.date < today,
+        TimeSlot.is_available == True,
+    ).delete()
+
+    # Create new slots for every technician
+    technicians = db.query(Technician).filter(Technician.is_active == True).all()
+    for tech in technicians:
+        # Only add if they don't already have future slots
+        existing_future = db.query(TimeSlot).filter(
+            TimeSlot.technician_id == tech.id,
+            TimeSlot.date >= today,
+            TimeSlot.is_available == True,
+        ).count()
+        if existing_future < 5:
+            create_time_slots(db, tech)
+
+    db.commit()
+    print(f"Refreshed time slots for {len(technicians)} technicians.")
+
+
 def seed_database(db: Session) -> None:
     """Seed the database with sample data."""
 
@@ -195,6 +238,8 @@ def seed_database(db: Session) -> None:
     existing_techs = db.query(Technician).count()
     if existing_techs > 0:
         print(f"Database already has {existing_techs} technicians. Skipping seed.")
+        # Always refresh time slots so demo has future availability
+        refresh_time_slots(db)
         return
 
     print("Seeding database with sample data...")

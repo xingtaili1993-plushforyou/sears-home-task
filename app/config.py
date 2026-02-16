@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o"
     openai_realtime_model: str = "gpt-4o-realtime-preview"
-    openai_voice: str = "alloy"  # Options: alloy, echo, fable, onyx, nova, shimmer
+    openai_voice: str = "shimmer"  # Options: alloy, echo, fable, onyx, nova, shimmer
 
     # SendGrid (for email)
     sendgrid_api_key: str = ""

@@ -13,7 +13,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api import api_router, upload_router, voice_router
+from app.api import api_router, dashboard_router, upload_router, voice_router
 
 # Import the shared session_manager from voice.py
 from app.api.voice import session_manager
@@ -87,6 +87,7 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api", tags=["API"])
 app.include_router(voice_router, prefix="/voice", tags=["Voice"])
 app.include_router(upload_router, tags=["Upload"])
+app.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
 
 # Static files for uploads
 uploads_path = Path("uploads")
@@ -99,13 +100,14 @@ async def root():
     """Root endpoint with service information."""
     return {
         "service": settings.app_name,
-        "version": "1.0.0",
+        "version": "2.0.0",
         "status": "operational",
         "endpoints": {
             "health": "/api/health",
             "docs": "/docs",
             "voice_webhook": "/voice/incoming-call",
             "api": "/api",
+            "dashboard": "/dashboard",
         },
     }
 

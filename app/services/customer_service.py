@@ -1,11 +1,14 @@
 """Service for customer-related operations."""
 
-from typing import Optional
+import logging
+from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import Customer
+from app.models import Appointment, Customer
 from app.schemas.customer import CustomerCreate
+
+logger = logging.getLogger(__name__)
 
 
 class CustomerService:
@@ -37,6 +40,35 @@ class CustomerService:
         """Get a customer by phone number."""
         return self.db.query(Customer).filter(Customer.phone == phone).first()
 
+    def get_customer_history(self, customer_id: int) -> List[str]:
+        """
+        Return a list of human-readable history items for a returning customer.
+        This is injected into the session so the agent can greet them personally.
+        """
+        facts: List[str] = []
+        try:
+            appointments = (
+                self.db.query(Appointment)
+                .filter(Appointment.customer_id == customer_id)
+                .order_by(Appointment.created_at.desc())
+                .limit(5)
+                .all()
+            )
+            if appointments:
+                facts.append(
+                    f"Returning customer with {len(appointments)} "
+                    f"previous appointment(s)."
+                )
+                latest = appointments[0]
+                facts.append(
+                    f"Most recent appointment: {latest.appliance_type} - "
+                    f"{latest.issue_description} "
+                    f"(status: {latest.status.value})"
+                )
+        except Exception as e:
+            logger.warning(f"Could not fetch customer history: {e}")
+        return facts
+
     def update_customer(self, customer_id: int, **kwargs) -> Optional[Customer]:
         """
         Update customer information.
@@ -47,7 +79,6 @@ class CustomerService:
         if not customer:
             return None
 
-        # Update only provided fields
         allowed_fields = [
             "email",
             "first_name",

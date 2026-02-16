@@ -49,9 +49,9 @@ class TestVoiceAgentTools:
     """Tests for tool definitions."""
 
     def test_get_tools_returns_all_tools(self, voice_agent):
-        """All five tools are present."""
+        """All eight tools are present (5 original + 3 new)."""
         tools = voice_agent.get_tools()
-        assert len(tools) == 5
+        assert len(tools) == 8
         tool_names = {t["name"] for t in tools}
         assert tool_names == {
             "get_troubleshooting_steps",
@@ -59,6 +59,9 @@ class TestVoiceAgentTools:
             "book_appointment",
             "request_image_upload",
             "update_customer_info",
+            "transfer_to_human",
+            "send_call_summary",
+            "send_sms_confirmation",
         }
 
     def test_each_tool_has_required_structure(self, voice_agent):
@@ -78,7 +81,7 @@ class TestVoiceAgentInitialMessage:
         """Greeting contains Sears Home Services and agent name."""
         msg = voice_agent.get_initial_message()
         assert "Sears Home Services" in msg
-        assert "Alex" in msg
+        assert "Samantha" in msg
         assert "help" in msg.lower()
 
 
@@ -129,3 +132,88 @@ class TestVoiceAgentExecuteTool:
                 sample_session,
             )
             assert "encountered an issue" in result.lower()
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_transfer_to_human(self, voice_agent, sample_session):
+        """transfer_to_human returns a transfer message."""
+        result = await voice_agent.execute_tool(
+            "transfer_to_human",
+            {
+                "reason": "customer requested",
+                "urgency": "normal",
+                "department": "general_support",
+                "summary": "Customer has a broken washer",
+            },
+            sample_session,
+        )
+        assert "Transfer initiated" in result or "EMERGENCY" in result
+        assert "General Support" in result
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_transfer_emergency(self, voice_agent, sample_session):
+        """Emergency transfer returns urgent message."""
+        result = await voice_agent.execute_tool(
+            "transfer_to_human",
+            {
+                "reason": "gas leak reported",
+                "urgency": "emergency",
+                "department": "emergency",
+                "summary": "Customer reports gas smell from oven",
+            },
+            sample_session,
+        )
+        assert "EMERGENCY" in result
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_send_call_summary(self, voice_agent, sample_session):
+        """send_call_summary returns success when no API key configured."""
+        sample_session.scheduling.customer_email = "test@example.com"
+        result = await voice_agent.execute_tool(
+            "send_call_summary",
+            {"email": "test@example.com", "summary_notes": "Test notes"},
+            sample_session,
+        )
+        assert "sent" in result.lower() or "email" in result.lower()
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_send_call_summary_no_email(
+        self, voice_agent, sample_session
+    ):
+        """send_call_summary asks for email when none is available."""
+        sample_session.scheduling.customer_email = None
+        result = await voice_agent.execute_tool(
+            "send_call_summary",
+            {},
+            sample_session,
+        )
+        assert "email" in result.lower()
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_send_sms_confirmation(
+        self, voice_agent, sample_session
+    ):
+        """send_sms_confirmation returns success in dev mode."""
+        result = await voice_agent.execute_tool(
+            "send_sms_confirmation",
+            {
+                "phone": "+15551234567",
+                "confirmation_number": "SHS-001",
+                "appointment_details": "Monday Jan 5 9:00AM-12:00PM",
+            },
+            sample_session,
+        )
+        assert "SMS" in result or "confirmation" in result.lower()
+
+
+class TestVoiceAgentReturningCustomer:
+    """Tests for returning customer greeting."""
+
+    def test_get_returning_customer_greeting(self, voice_agent):
+        """Returning customer greeting includes name and history."""
+        greeting = voice_agent.get_returning_customer_greeting(
+            "Jane Doe",
+            "Returning customer with 2 previous appointment(s).",
+        )
+        assert "Jane Doe" in greeting
+        assert "Samantha" in greeting
+        assert "Returning customer" in greeting

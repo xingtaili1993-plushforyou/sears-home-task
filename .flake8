@@ -22,6 +22,7 @@ per-file-ignores =
     __init__.py:F401
     scripts/*:F401,F841
     app/api/upload.py:F401,F841
+    app/api/dashboard.py:F401,E501
     app/voice/realtime_handler.py:F401
     app/voice/agent.py:F401
     app/api/voice.py:F401
@@ -31,5 +32,7 @@ per-file-ignores =
     app/models/technician.py:F401
     app/services/image_service.py:F401
     app/services/scheduling_service.py:F401
+    app/services/sms_service.py:F401
+    app/services/email_service.py:F401
     app/seed_data.py:F401
     app/schemas/*:F401

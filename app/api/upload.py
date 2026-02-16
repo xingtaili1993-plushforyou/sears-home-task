@@ -378,10 +378,20 @@ async def submit_upload(
     if not success:
         raise HTTPException(status_code=400, detail=result)
 
-    # Trigger image analysis in background
+    # Trigger image analysis and email results to customer
     try:
-        await image_service.analyze_image(token)
-    except Exception as e:
+        success, analysis = await image_service.analyze_image(token)
+        if success:
+            # Send analysis results via email
+            upload_request = image_service.get_upload_request_by_token(token)
+            if upload_request and upload_request.email_sent_to:
+                email_service = EmailService()
+                await email_service.send_image_analysis(
+                    to_email=upload_request.email_sent_to,
+                    appliance_type=upload_request.appliance_type,
+                    analysis=analysis,
+                )
+    except Exception:
         # Log but don't fail the upload
         pass
 

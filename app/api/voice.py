@@ -1,6 +1,5 @@
 """Voice API routes for Twilio webhook handling."""
 
-import json
 import logging
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -38,13 +37,29 @@ async def handle_incoming_call(request: Request, db: Session = Depends(get_db)):
     customer_service = CustomerService(db)
     customer = customer_service.get_or_create_customer(caller)
 
-    # Initialize conversation session
-    await session_manager.create_session(
+    # Lookup customer history for returning-customer recognition
+    history = customer_service.get_customer_history(customer.id)
+
+    # Initialize conversation session with history context
+    session = await session_manager.create_session(
         call_sid=call_sid, customer_phone=caller, customer_id=customer.id
     )
 
+    # Inject returning customer context into session key_facts
+    if customer.full_name:
+        session.scheduling.customer_name = customer.full_name
+        session.add_fact(f"Returning customer: {customer.full_name}")
+    if customer.email:
+        session.scheduling.customer_email = customer.email
+    if customer.zip_code:
+        session.scheduling.customer_zip_code = customer.zip_code
+
+    for item in history:
+        session.add_fact(item)
+
     # Build WebSocket URL for media streaming
-    ws_url = f"wss://{request.headers.get('host', 'localhost')}/voice/media-stream/{call_sid}"
+    host = request.headers.get("host", "localhost")
+    ws_url = f"wss://{host}/voice/media-stream/{call_sid}"
 
     # Return TwiML to connect to WebSocket
     twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -83,6 +98,48 @@ async def media_stream_endpoint(call_sid: str, request: Request):
     The actual WebSocket handling is done in the main app.
     """
     return PlainTextResponse("WebSocket endpoint - use ws:// or wss://")
+
+
+@router.post("/transfer/{call_sid}")
+async def transfer_call(call_sid: str, request: Request):
+    """
+    Transfer a call to a live human agent.
+
+    Returns TwiML that bridges the caller to the support line.
+    """
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    department = body.get("department", "general_support")
+    urgency = body.get("urgency", "normal")
+
+    session = await session_manager.get_session(call_sid)
+    summary = ""
+    if session:
+        summary = "; ".join(session.key_facts[-5:]) if session.key_facts else ""
+
+    logger.info(
+        f"Transfer call {call_sid} to {department} (urgency={urgency})"
+    )
+
+    # In production, these would be real department phone numbers
+    department_numbers = {
+        "general_support": "+18004694663",
+        "scheduling": "+18004694663",
+        "technical": "+18004694663",
+        "emergency": "+18004694663",
+    }
+    target = department_numbers.get(department, "+18004694663")
+
+    twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="Polly.Joanna">
+        Please hold while I connect you with a specialist.
+    </Say>
+    <Dial callerId="{settings.twilio_phone_number}">
+        {target}
+    </Dial>
+</Response>"""
+
+    return Response(content=twiml, media_type="application/xml")
 
 
 @router.get("/session/{call_sid}")
