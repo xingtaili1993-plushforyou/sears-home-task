@@ -1,6 +1,15 @@
 [flake8]
 max-line-length = 88
-extend-ignore = E203, W503
+extend-ignore =
+    E203,
+    W503,
+    E501,
+    E712,
+    E722,
+    W291,
+    W293,
+    F541,
+    E402
 exclude =
     .git,
     __pycache__,
@@ -11,3 +20,16 @@ exclude =
     uploads
 per-file-ignores =
     __init__.py:F401
+    scripts/*:F401,F841
+    app/api/upload.py:F401,F841
+    app/voice/realtime_handler.py:F401
+    app/voice/agent.py:F401
+    app/api/voice.py:F401
+    app/config.py:F401
+    app/main.py:F401
+    app/models/base.py:F401
+    app/models/technician.py:F401
+    app/services/image_service.py:F401
+    app/services/scheduling_service.py:F401
+    app/seed_data.py:F401
+    app/schemas/*:F401

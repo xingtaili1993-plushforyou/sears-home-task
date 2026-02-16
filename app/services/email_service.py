@@ -10,28 +10,28 @@ logger = logging.getLogger(__name__)
 
 class EmailService:
     """Service for sending transactional emails."""
-    
+
     def __init__(self):
         self.from_email = settings.sendgrid_from_email
         self.api_key = settings.sendgrid_api_key
-    
+
     async def send_image_upload_link(
         self,
         to_email: str,
         upload_url: str,
         customer_name: Optional[str] = None,
-        appliance_type: Optional[str] = None
+        appliance_type: Optional[str] = None,
     ) -> bool:
         """
         Send an email with the image upload link.
-        
+
         Returns True if sent successfully, False otherwise.
         """
         name = customer_name or "Valued Customer"
         appliance = appliance_type or "your appliance"
-        
+
         subject = "Sears Home Services - Upload Photo of Your Appliance"
-        
+
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -91,7 +91,7 @@ class EmailService:
         </body>
         </html>
         """
-        
+
         text_content = f"""
         Dear {name},
         
@@ -112,7 +112,7 @@ class EmailService:
         
         Thank you for choosing Sears Home Services!
         """
-        
+
         # If SendGrid API key is not configured, log and return
         if not self.api_key:
             logger.warning(
@@ -121,23 +121,23 @@ class EmailService:
             )
             # In development, we'll consider this a success
             return True
-        
+
         try:
             import sendgrid
-            from sendgrid.helpers.mail import Mail, Email, To, Content
-            
+            from sendgrid.helpers.mail import Content, Email, Mail, To
+
             sg = sendgrid.SendGridAPIClient(api_key=self.api_key)
-            
+
             message = Mail(
                 from_email=Email(self.from_email, "Sears Home Services"),
                 to_emails=To(to_email),
                 subject=subject,
                 plain_text_content=Content("text/plain", text_content),
-                html_content=Content("text/html", html_content)
+                html_content=Content("text/html", html_content),
             )
-            
+
             response = sg.send(message)
-            
+
             if response.status_code in [200, 201, 202]:
                 logger.info(f"Email sent successfully to {to_email}")
                 return True
@@ -146,14 +146,14 @@ class EmailService:
                     f"Failed to send email: {response.status_code} - {response.body}"
                 )
                 return False
-                
+
         except ImportError:
             logger.warning("SendGrid package not installed. Email not sent.")
             return True  # Return True in development
         except Exception as e:
             logger.error(f"Error sending email: {str(e)}")
             return False
-    
+
     async def send_appointment_confirmation(
         self,
         to_email: str,
@@ -163,12 +163,12 @@ class EmailService:
         appointment_time: str,
         technician_name: str,
         appliance_type: str,
-        issue_description: str
+        issue_description: str,
     ) -> bool:
         """Send appointment confirmation email."""
-        
+
         subject = f"Appointment Confirmed - {confirmation_number}"
-        
+
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -217,27 +217,27 @@ class EmailService:
         </body>
         </html>
         """
-        
+
         if not self.api_key:
             logger.warning(f"Would send confirmation email to {to_email}")
             return True
-        
+
         try:
             import sendgrid
-            from sendgrid.helpers.mail import Mail, Email, To, Content
-            
+            from sendgrid.helpers.mail import Content, Email, Mail, To
+
             sg = sendgrid.SendGridAPIClient(api_key=self.api_key)
-            
+
             message = Mail(
                 from_email=Email(self.from_email, "Sears Home Services"),
                 to_emails=To(to_email),
                 subject=subject,
-                html_content=Content("text/html", html_content)
+                html_content=Content("text/html", html_content),
             )
-            
+
             response = sg.send(message)
             return response.status_code in [200, 201, 202]
-            
+
         except Exception as e:
             logger.error(f"Error sending confirmation email: {str(e)}")
             return False

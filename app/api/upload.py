@@ -1,53 +1,52 @@
 """Routes for image upload functionality."""
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
-from app.database import get_db
-from app.services import ImageService, EmailService
-from app.schemas import ImageUploadCreate, ImageUploadResponse
 from app.config import settings
+from app.database import get_db
+from app.schemas import ImageUploadCreate, ImageUploadResponse
+from app.services import EmailService, ImageService
 
 router = APIRouter()
 
 
 @router.post("/image-upload-request", response_model=ImageUploadResponse)
 async def create_image_upload_request(
-    request_data: ImageUploadCreate,
-    db: Session = Depends(get_db)
+    request_data: ImageUploadCreate, db: Session = Depends(get_db)
 ):
     """
     Create an image upload request and send email to customer.
-    
+
     This is called by the voice agent when visual diagnosis would be helpful.
     """
     image_service = ImageService(db)
     email_service = EmailService()
-    
+
     # Create the upload request
     upload_request = image_service.create_upload_request(
         customer_id=request_data.customer_id,
         email=request_data.email,
         appliance_type=request_data.appliance_type,
         issue_description=request_data.issue_description,
-        call_sid=request_data.call_sid
+        call_sid=request_data.call_sid,
     )
-    
+
     # Generate the upload URL
     upload_url = image_service.get_upload_url(upload_request.upload_token)
-    
+
     # Send the email
     email_sent = await email_service.send_image_upload_link(
         to_email=request_data.email,
         upload_url=upload_url,
-        appliance_type=request_data.appliance_type
+        appliance_type=request_data.appliance_type,
     )
-    
+
     if not email_sent:
         # Log but don't fail - the URL is still valid
         pass
-    
+
     return ImageUploadResponse(
         id=upload_request.id,
         upload_token=upload_request.upload_token,
@@ -55,25 +54,22 @@ async def create_image_upload_request(
         email_sent_to=upload_request.email_sent_to,
         expires_at=upload_request.expires_at,
         is_used=upload_request.is_used,
-        image_analysis=upload_request.image_analysis
+        image_analysis=upload_request.image_analysis,
     )
 
 
 @router.get("/upload/{token}", response_class=HTMLResponse)
-async def upload_page(
-    token: str,
-    db: Session = Depends(get_db)
-):
+async def upload_page(token: str, db: Session = Depends(get_db)):
     """
     Serve the image upload page.
-    
+
     This is the page customers see when they click the email link.
     """
     image_service = ImageService(db)
-    
+
     # Validate the token
     is_valid, error = image_service.validate_upload_token(token)
-    
+
     if not is_valid:
         return HTMLResponse(
             content=f"""
@@ -96,9 +92,9 @@ async def upload_page(
             </body>
             </html>
             """,
-            status_code=400
+            status_code=400,
         )
-    
+
     # Return the upload form
     return HTMLResponse(
         content=f"""
@@ -352,73 +348,66 @@ async def upload_page(
 
 @router.post("/upload/{token}/submit")
 async def submit_upload(
-    token: str,
-    image: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    token: str, image: UploadFile = File(...), db: Session = Depends(get_db)
 ):
     """
     Handle the actual image upload submission.
     """
     image_service = ImageService(db)
-    
+
     # Validate file type
     allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/heic"]
     if image.content_type not in allowed_types:
         raise HTTPException(
             status_code=400,
-            detail=f"File type not supported. Please upload a JPG, PNG, or HEIC image."
+            detail=f"File type not supported. Please upload a JPG, PNG, or HEIC image.",
         )
-    
+
     # Check file size
     max_size = settings.max_image_size_mb * 1024 * 1024
     content = await image.read()
     if len(content) > max_size:
         raise HTTPException(
             status_code=400,
-            detail=f"File too large. Maximum size is {settings.max_image_size_mb}MB."
+            detail=f"File too large. Maximum size is {settings.max_image_size_mb}MB.",
         )
-    
+
     # Save the image
     success, result = await image_service.save_uploaded_image(
-        token=token,
-        image_data=content,
-        filename=image.filename or "upload.jpg"
+        token=token, image_data=content, filename=image.filename or "upload.jpg"
     )
-    
+
     if not success:
         raise HTTPException(status_code=400, detail=result)
-    
+
     # Trigger image analysis in background
     try:
         await image_service.analyze_image(token)
     except Exception as e:
         # Log but don't fail the upload
         pass
-    
+
     return {"message": "Upload successful", "path": result}
 
 
 @router.get("/upload/{token}/analysis")
-async def get_image_analysis(
-    token: str,
-    db: Session = Depends(get_db)
-):
+async def get_image_analysis(token: str, db: Session = Depends(get_db)):
     """
     Get the analysis results for an uploaded image.
     """
     image_service = ImageService(db)
     upload_request = image_service.get_upload_request_by_token(token)
-    
+
     if not upload_request:
         raise HTTPException(status_code=404, detail="Upload not found")
-    
+
     if not upload_request.image_analysis:
         # Try to analyze if not done yet
         if upload_request.image_path:
             success, analysis = await image_service.analyze_image(token)
             if success:
                 return {"analysis": analysis}
-        
+
         raise HTTPException(status_code=404, detail="No analysis available yet")
-    
+
     return {"analysis": upload_request.image_analysis}

@@ -1,12 +1,14 @@
 """Schemas for customer-related data."""
 
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
 from pydantic import BaseModel, EmailStr
 
 
 class CustomerBase(BaseModel):
     """Base schema for customer data."""
+
     phone: str
     email: Optional[EmailStr] = None
     first_name: Optional[str] = None
@@ -20,20 +22,23 @@ class CustomerBase(BaseModel):
 
 class CustomerCreate(CustomerBase):
     """Schema for creating a new customer."""
+
     pass
 
 
 class CustomerResponse(CustomerBase):
     """Schema for customer response."""
+
     id: int
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
 
 class ImageUploadCreate(BaseModel):
     """Schema for creating an image upload request."""
+
     customer_id: int
     email: EmailStr
     appliance_type: Optional[str] = None
@@ -43,6 +48,7 @@ class ImageUploadCreate(BaseModel):
 
 class ImageUploadResponse(BaseModel):
     """Schema for image upload request response."""
+
     id: int
     upload_token: str
     upload_url: str
@@ -50,6 +56,6 @@ class ImageUploadResponse(BaseModel):
     expires_at: datetime
     is_used: bool
     image_analysis: Optional[str] = None
-    
+
     class Config:
         from_attributes = True

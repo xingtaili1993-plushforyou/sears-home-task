@@ -2,7 +2,6 @@
 
 import pytest
 
-from app.voice.session_manager import SessionManager
 from app.schemas.conversation import ConversationPhase
 
 

@@ -1,20 +1,17 @@
 """Pydantic schemas for API request/response validation."""
 
-from app.schemas.technician import (
-    TechnicianBase,
-    TechnicianCreate,
-    TechnicianResponse,
-    TechnicianWithAvailability,
-    SpecialtyResponse,
-    ServiceAreaResponse,
-)
 from app.schemas.appointment import (
     AppointmentBase,
     AppointmentCreate,
     AppointmentResponse,
     AppointmentUpdate,
-    TimeSlotResponse,
     AvailableSlotResponse,
+    TimeSlotResponse,
+)
+from app.schemas.conversation import (
+    ConversationState,
+    DiagnosticInfo,
+    SchedulingInfo,
 )
 from app.schemas.customer import (
     CustomerBase,
@@ -23,10 +20,13 @@ from app.schemas.customer import (
     ImageUploadCreate,
     ImageUploadResponse,
 )
-from app.schemas.conversation import (
-    ConversationState,
-    DiagnosticInfo,
-    SchedulingInfo,
+from app.schemas.technician import (
+    ServiceAreaResponse,
+    SpecialtyResponse,
+    TechnicianBase,
+    TechnicianCreate,
+    TechnicianResponse,
+    TechnicianWithAvailability,
 )
 
 __all__ = [

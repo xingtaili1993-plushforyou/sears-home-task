@@ -1,33 +1,32 @@
 """Pytest fixtures for testing."""
 
-import pytest
 from datetime import date, time, timedelta
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.main import app
 from app.database import get_db
+from app.main import app
 from app.models import (
     Base,
-    Technician,
-    TechnicianSpecialty,
-    TechnicianServiceArea,
-    TimeSlot,
     Customer,
+    Technician,
+    TechnicianServiceArea,
+    TechnicianSpecialty,
+    TimeSlot,
 )
 from app.schemas.conversation import (
-    ConversationState,
     ConversationPhase,
+    ConversationState,
     DiagnosticInfo,
     SchedulingInfo,
 )
 from app.voice.agent import VoiceAgent
 from app.voice.session_manager import SessionManager
-
 
 # ---------------------------------------------------------------------------
 # Database engine (in-memory SQLite shared across all tests)
@@ -110,7 +109,9 @@ def sample_customer_data():
 def seeded_db_session(db_session):
     """Database session pre-populated with technicians, slots, and a customer."""
     # Create specialties
-    washer_spec = TechnicianSpecialty(appliance_type="washer", description="Washer repair")
+    washer_spec = TechnicianSpecialty(
+        appliance_type="washer", description="Washer repair"
+    )
     dryer_spec = TechnicianSpecialty(appliance_type="dryer", description="Dryer repair")
     fridge_spec = TechnicianSpecialty(
         appliance_type="refrigerator", description="Refrigerator repair"

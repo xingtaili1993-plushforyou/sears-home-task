@@ -1,12 +1,12 @@
 """Tests for ImageService."""
 
-import os
-import pytest
 from datetime import datetime, timedelta
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import patch
 
-from app.services.image_service import ImageService
+import pytest
+
 from app.models import Customer, ImageUploadRequest
+from app.services.image_service import ImageService
 
 
 class TestImageServiceCreateUpload:

@@ -4,27 +4,28 @@ SEARS Home Services - Voice AI Diagnostic Agent
 Main FastAPI application entry point.
 """
 
-import logging
 import json
+import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pathlib import Path
 
-from app.config import settings
-from app.database import init_db, get_db_context
-from app.seed_data import seed_database
-from app.api import api_router, voice_router, upload_router
-from app.voice import VoiceAgent, RealtimeHandler
+from app.api import api_router, upload_router, voice_router
+
 # Import the shared session_manager from voice.py
 from app.api.voice import session_manager
+from app.config import settings
+from app.database import get_db_context, init_db
+from app.seed_data import seed_database
+from app.voice import RealtimeHandler, VoiceAgent
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO if not settings.debug else logging.DEBUG,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -37,22 +38,22 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
     logger.info("Starting SEARS Voice AI Diagnostic Agent...")
-    
+
     # Initialize database
     init_db()
     logger.info("Database initialized")
-    
+
     # Seed data if needed
     with get_db_context() as db:
         seed_database(db)
-    
+
     # Create uploads directory
     Path("uploads/images").mkdir(parents=True, exist_ok=True)
-    
+
     logger.info(f"Application ready at {settings.base_url}")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down...")
 
@@ -70,7 +71,7 @@ app = FastAPI(
     - Image upload for visual diagnosis
     """,
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # CORS middleware
@@ -104,8 +105,8 @@ async def root():
             "health": "/api/health",
             "docs": "/docs",
             "voice_webhook": "/voice/incoming-call",
-            "api": "/api"
-        }
+            "api": "/api",
+        },
     }
 
 
@@ -113,19 +114,19 @@ async def root():
 async def websocket_media_stream(websocket: WebSocket, call_sid: str):
     """
     WebSocket endpoint for Twilio media streams.
-    
+
     This handles real-time audio streaming between Twilio and the AI agent.
     """
     await websocket.accept()
     logger.info(f"WebSocket connected for call: {call_sid}")
-    
+
     try:
         # Create realtime handler for this connection
         handler = RealtimeHandler(session_manager, voice_agent)
-        
+
         # Handle the connection
         await handler.handle_twilio_connection(websocket, call_sid)
-        
+
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected for call: {call_sid}")
     except Exception as e:
@@ -142,15 +143,13 @@ async def test_voice_endpoint():
         "twilio_configured": bool(settings.twilio_account_sid),
         "openai_configured": bool(settings.openai_api_key),
         "realtime_model": settings.openai_realtime_model,
-        "voice": settings.openai_voice
+        "voice": settings.openai_voice,
     }
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
-        "app.main:app",
-        host=settings.host,
-        port=settings.port,
-        reload=settings.debug
+        "app.main:app", host=settings.host, port=settings.port, reload=settings.debug
     )

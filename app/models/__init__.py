@@ -1,14 +1,19 @@
 """Database models for the Voice AI Diagnostic Agent."""
 
+from app.models.availability import Appointment, TimeSlot
 from app.models.base import Base
-from app.models.technician import Technician, TechnicianSpecialty, TechnicianServiceArea, ApplianceType
-from app.models.availability import TimeSlot, Appointment
 from app.models.customer import Customer, ImageUploadRequest
+from app.models.technician import (
+    ApplianceType,
+    Technician,
+    TechnicianServiceArea,
+    TechnicianSpecialty,
+)
 
 __all__ = [
     "Base",
     "Technician",
-    "TechnicianSpecialty", 
+    "TechnicianSpecialty",
     "TechnicianServiceArea",
     "ApplianceType",
     "TimeSlot",

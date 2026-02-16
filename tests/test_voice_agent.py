@@ -1,15 +1,11 @@
 """Tests for the VoiceAgent class."""
 
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import MagicMock, patch
 
-from app.voice.agent import VoiceAgent, SYSTEM_PROMPT
-from app.schemas.conversation import (
-    ConversationState,
-    ConversationPhase,
-    DiagnosticInfo,
-    SchedulingInfo,
-)
+import pytest
+
+from app.schemas.conversation import ConversationState
+from app.voice.agent import SYSTEM_PROMPT
 
 
 class TestVoiceAgentPrompt:
@@ -105,9 +101,7 @@ class TestVoiceAgentExecuteTool:
     ):
         """check_technician_availability queries the database."""
         with patch("app.voice.agent.get_db_context") as mock_ctx:
-            mock_ctx.return_value.__enter__ = MagicMock(
-                return_value=seeded_db_session
-            )
+            mock_ctx.return_value.__enter__ = MagicMock(return_value=seeded_db_session)
             mock_ctx.return_value.__exit__ = MagicMock(return_value=False)
 
             result = await voice_agent.execute_tool(
@@ -120,9 +114,7 @@ class TestVoiceAgentExecuteTool:
     @pytest.mark.asyncio
     async def test_execute_tool_unknown(self, voice_agent, sample_session):
         """Unknown tool name returns descriptive message."""
-        result = await voice_agent.execute_tool(
-            "nonexistent_tool", {}, sample_session
-        )
+        result = await voice_agent.execute_tool("nonexistent_tool", {}, sample_session)
         assert "Unknown tool" in result
 
     @pytest.mark.asyncio
