@@ -19,7 +19,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install linting tools
-        run: pip install black isort flake8
+        run: pip install -r requirements.txt
 
       - name: Check formatting with black
         run: black --check .

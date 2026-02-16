@@ -96,8 +96,7 @@ async def upload_page(token: str, db: Session = Depends(get_db)):
         )
 
     # Return the upload form
-    return HTMLResponse(
-        content=f"""
+    return HTMLResponse(content=f"""
         <!DOCTYPE html>
         <html>
         <head>
@@ -342,8 +341,7 @@ async def upload_page(token: str, db: Session = Depends(get_db)):
             </script>
         </body>
         </html>
-        """
-    )
+        """)
 
 
 @router.post("/upload/{token}/submit")
