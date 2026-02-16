@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install linting tools
+        run: pip install black isort flake8
+
+      - name: Check formatting with black
+        run: black --check .
+
+      - name: Check import ordering with isort
+        run: isort --check .
+
+      - name: Run flake8
+        run: flake8
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest-mock
+
+      - name: Run tests with coverage
+        env:
+          DATABASE_URL: "sqlite:///test.db"
+          OPENAI_API_KEY: "sk-test-fake-key"
+          TWILIO_ACCOUNT_SID: "AC_test"
+          TWILIO_AUTH_TOKEN: "test_token"
+          TWILIO_PHONE_NUMBER: "+15550000000"
+          BASE_URL: "http://localhost:8000"
+          SENDGRID_API_KEY: ""
+          SENDGRID_FROM_EMAIL: "test@test.com"
+        run: pytest --cov=app --cov-report=xml --cov-report=term-missing -v
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t sears-voice-ai:test .
+
+      - name: Verify image was built
+        run: docker images sears-voice-ai:test

@@ -2,9 +2,17 @@
 
 import pytest
 from fastapi.testclient import TestClient
+from unittest.mock import patch
 
-from app.models import Technician, TechnicianSpecialty, TechnicianServiceArea, TimeSlot
-from datetime import date, time, timedelta
+from app.models import (
+    Technician,
+    TechnicianSpecialty,
+    TechnicianServiceArea,
+    TimeSlot,
+    Customer,
+    ImageUploadRequest,
+)
+from datetime import date, time, timedelta, datetime
 
 
 class TestHealthEndpoint:
@@ -106,7 +114,7 @@ class TestCustomerEndpoints:
 
 class TestRootEndpoint:
     """Tests for the root endpoint."""
-    
+
     def test_root(self, client):
         """Test root endpoint returns service info."""
         response = client.get("/")
@@ -115,3 +123,76 @@ class TestRootEndpoint:
         assert "service" in data
         assert "version" in data
         assert "endpoints" in data
+
+
+class TestUploadEndpoints:
+    """Tests for image upload endpoints."""
+
+    def _seed_customer(self, db_session):
+        """Create a customer for upload tests."""
+        customer = Customer(phone="+15550001234", email="up@test.com")
+        db_session.add(customer)
+        db_session.commit()
+        return customer
+
+    def test_image_upload_request_endpoint(self, client, db_session):
+        """Create upload request via the API."""
+        customer = self._seed_customer(db_session)
+
+        response = client.post(
+            "/image-upload-request",
+            json={
+                "customer_id": customer.id,
+                "email": "up@test.com",
+                "appliance_type": "oven",
+                "issue_description": "not heating",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "upload_token" in data
+        assert data["email_sent_to"] == "up@test.com"
+        assert data["is_used"] is False
+
+    def test_upload_page_valid_token(self, client, db_session):
+        """Valid token serves the upload HTML page."""
+        customer = self._seed_customer(db_session)
+        req = ImageUploadRequest(
+            customer_id=customer.id,
+            upload_token="page_test_token",
+            email_sent_to="p@test.com",
+            email_sent_at=datetime.utcnow(),
+            expires_at=datetime.utcnow() + timedelta(hours=24),
+            is_used=False,
+        )
+        db_session.add(req)
+        db_session.commit()
+
+        response = client.get("/upload/page_test_token")
+        assert response.status_code == 200
+        assert "Upload Appliance Photo" in response.text
+        assert "page_test_token" in response.text
+
+    def test_upload_page_invalid_token(self, client, db_session):
+        """Invalid token returns error page."""
+        response = client.get("/upload/does_not_exist")
+        assert response.status_code == 400
+        assert "Invalid" in response.text
+
+    def test_upload_page_expired_token(self, client, db_session):
+        """Expired token returns error page."""
+        customer = self._seed_customer(db_session)
+        req = ImageUploadRequest(
+            customer_id=customer.id,
+            upload_token="expired_page_tok",
+            email_sent_to="e@test.com",
+            email_sent_at=datetime.utcnow(),
+            expires_at=datetime.utcnow() - timedelta(hours=1),
+            is_used=False,
+        )
+        db_session.add(req)
+        db_session.commit()
+
+        response = client.get("/upload/expired_page_tok")
+        assert response.status_code == 400
+        assert "expired" in response.text.lower()
