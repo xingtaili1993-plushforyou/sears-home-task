@@ -90,12 +90,51 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          command_timeout: 10m
           script: |
+            set -e
             cd ~/sears-home-task
+
+            echo "=== Pulling latest code ==="
             git pull origin main
+
+            echo "=== Rebuilding containers ==="
             docker compose down
             docker compose up -d --build
-            echo "Waiting for services to start..."
-            sleep 10
+
+            echo "=== Waiting for services to start ==="
+            sleep 15
             docker compose ps
-            curl -sf http://localhost:8000/api/health || echo "Health check pending..."
+
+            echo "=== Health check ==="
+            curl -sf http://localhost:8000/api/health && echo " OK" || echo " Pending..."
+
+            echo "=== Setting up ngrok service ==="
+            if ! systemctl is-active --quiet ngrok.service 2>/dev/null; then
+              sudo tee /etc/systemd/system/ngrok.service > /dev/null <<'UNIT'
+            [Unit]
+            Description=ngrok tunnel
+            After=network.target docker.service
+            Wants=docker.service
+
+            [Service]
+            Type=simple
+            User=ubuntu
+            ExecStart=/usr/local/bin/ngrok http 8000 --log=stdout
+            Restart=on-failure
+            RestartSec=5
+
+            [Install]
+            WantedBy=multi-user.target
+            UNIT
+              sudo systemctl daemon-reload
+              sudo systemctl enable ngrok.service
+            fi
+
+            echo "=== Restarting ngrok ==="
+            sudo systemctl restart ngrok.service
+            sleep 5
+            sudo systemctl status ngrok.service --no-pager || true
+
+            echo "=== Deployment complete ==="
