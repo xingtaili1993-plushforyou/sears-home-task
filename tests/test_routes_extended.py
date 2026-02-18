@@ -1,7 +1,5 @@
 """Extended tests for API routes with seeded data."""
 
-from datetime import date, timedelta
-
 from app.models import Customer, TimeSlot
 
 

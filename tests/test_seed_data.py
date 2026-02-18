@@ -1,6 +1,6 @@
 """Tests for seed_data module."""
 
-from datetime import date, timedelta
+from datetime import date
 
 from app.models import Technician, TechnicianSpecialty, TimeSlot
 from app.seed_data import (
@@ -32,10 +32,6 @@ class TestCreateTimeSlots:
         """Time slots are created for a valid technician."""
         db = seeded_db_session
         tech = db.query(Technician).first()
-        initial_count = (
-            db.query(TimeSlot).filter(TimeSlot.technician_id == tech.id).count()
-        )
-
         slots = create_time_slots(db, tech, days_ahead=5)
         db.commit()
         assert len(slots) > 0

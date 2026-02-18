@@ -1,9 +1,6 @@
 """Tests for customer history lookup and seed data refresh."""
 
-from datetime import date, time, timedelta
-
-from app.models import Customer, Technician, TechnicianServiceArea, TimeSlot
-from app.models.availability import Appointment, AppointmentStatus
+from app.models import Customer, TimeSlot
 from app.services.customer_service import CustomerService
 from app.services.scheduling_service import SchedulingService
 

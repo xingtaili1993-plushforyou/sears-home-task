@@ -4,8 +4,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.schemas.conversation import ConversationState, DiagnosticInfo, SchedulingInfo
-
 
 class TestBookAppointment:
     """Tests for the _book_appointment tool."""

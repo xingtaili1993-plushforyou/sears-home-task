@@ -1,9 +1,5 @@
 """Tests for voice API endpoints."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
-
 from app.models import Customer
 
 

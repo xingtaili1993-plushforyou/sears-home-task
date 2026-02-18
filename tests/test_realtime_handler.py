@@ -1,6 +1,5 @@
 """Tests for the RealtimeHandler (non-WebSocket parts)."""
 
-import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
