@@ -321,13 +321,69 @@ class RealtimeHandler:
                 },
             }
             await self.openai_ws.send(json.dumps(tool_result))
-
-            # If a transfer was initiated, we could end the AI side here
-            # but for demo purposes we let the agent say goodbye first
             await self.openai_ws.send(json.dumps({"type": "response.create"}))
+
+            if name == "transfer_to_human" and self.session:
+                asyncio.create_task(
+                    self._execute_live_transfer(
+                        self.session.call_sid,
+                        arguments.get("department", "general_support"),
+                        arguments.get("urgency", "normal"),
+                    )
+                )
 
         except Exception as e:
             logger.error(f"Error handling tool call: {str(e)}")
+
+    # ------------------------------------------------------------------
+    # Live call transfer via Twilio REST API
+    # ------------------------------------------------------------------
+
+    async def _execute_live_transfer(
+        self, call_sid: str, department: str, urgency: str
+    ):
+        """
+        Redirect the live Twilio call to a real phone number.
+
+        Waits a few seconds so the AI can finish its goodbye message,
+        then uses the Twilio REST API to update the call with TwiML
+        that dials the specialist.
+        """
+        await asyncio.sleep(6)
+
+        department_numbers = {
+            "general_support": "+15104025551",
+            "scheduling": "+15104025551",
+            "technical": "+15104025551",
+            "emergency": "+15104025551",
+        }
+        target = department_numbers.get(department, "+15104025551")
+
+        twiml = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            "<Response>"
+            '<Say voice="Polly.Joanna">'
+            "Please hold while I connect you with a specialist."
+            "</Say>"
+            f'<Dial callerId="{settings.twilio_phone_number}">'
+            f"{target}"
+            "</Dial>"
+            "</Response>"
+        )
+
+        try:
+            from twilio.rest import Client
+
+            client = Client(settings.twilio_account_sid, settings.twilio_auth_token)
+            client.calls(call_sid).update(twiml=twiml)
+            logger.info(
+                f"Live transfer executed for {call_sid} -> {target} "
+                f"(dept={department})"
+            )
+        except ImportError:
+            logger.warning("Twilio package not installed. Live transfer skipped.")
+        except Exception as e:
+            logger.error(f"Failed to execute live transfer for {call_sid}: {e}")
 
     # ------------------------------------------------------------------
     # Cleanup

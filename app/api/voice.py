@@ -125,14 +125,13 @@ async def transfer_call(call_sid: str, request: Request):
         f"(urgency={urgency}) summary={summary!r}"
     )
 
-    # In production, these would be real department phone numbers
     department_numbers = {
-        "general_support": "+18004694663",
-        "scheduling": "+18004694663",
-        "technical": "+18004694663",
-        "emergency": "+18004694663",
+        "general_support": "+15104025551",
+        "scheduling": "+15104025551",
+        "technical": "+15104025551",
+        "emergency": "+15104025551",
     }
-    target = department_numbers.get(department, "+18004694663")
+    target = department_numbers.get(department, "+15104025551")
 
     twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
