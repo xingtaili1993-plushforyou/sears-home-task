@@ -27,11 +27,16 @@ A production-grade voice AI system that assists customers experiencing issues wi
 ### World-Class Agent Upgrades (v2.0)
 - **Returning Customer Recognition**: Greets returning customers by name with history context
 - **Frustration Detection & Empathy**: Detects customer frustration and responds with de-escalation
-- **Human Escalation**: Seamless transfer to live agents with context handoff
+- **Live Call Transfer**: Real transfer to a live specialist via Twilio REST API (not a simulated handoff)
 - **Post-Call Summary Email**: Professional HTML email summarizing the call, troubleshooting steps, and appointment details
 - **SMS Confirmations**: Sends text message appointment confirmations via Twilio
 - **Live Dashboard**: Real-time web dashboard showing transcript, tool calls, and sentiment
 - **Email/Phone Verification**: Spells back emails letter-by-letter and reads phone numbers in groups for accuracy
+
+### Testing and Quality
+- **83% Code Coverage**: 227 unit tests across 15 test modules
+- **Automated CI/CD**: Full pipeline with lint, test, Docker build, and auto-deploy to EC2
+- **Code Quality**: Enforced via black, isort, and flake8 on every push
 
 ## Architecture
 
@@ -115,7 +120,7 @@ The application is deployed on AWS EC2 for production use.
 - **HTTPS**: ngrok tunnel with static domain
 - **Containers**: Docker Compose (app + PostgreSQL + Redis)
 
-### Deploy to EC2
+### Initial EC2 Setup (one-time)
 
 ```bash
 # SSH into your EC2 instance
@@ -132,23 +137,40 @@ curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
   && echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
   | sudo tee /etc/apt/sources.list.d/ngrok.list \
   && sudo apt update && sudo apt install ngrok
+ngrok config add-authtoken <YOUR_TOKEN>
 
 # Clone, configure, and start
 git clone https://github.com/xingtaili1993-plushforyou/sears-home-task.git
 cd sears-home-task
 nano .env  # Add your credentials
 docker compose up -d --build
-
-# Start ngrok in a screen session
-ngrok config add-authtoken <YOUR_TOKEN>
-screen -dmS ngrok ngrok http 8000 --domain=your-domain.ngrok-free.app
 ```
 
+### Automated Deployment (CI/CD)
+
+After the initial setup, every push to `main` automatically deploys to EC2 via GitHub Actions:
+
+1. Lint, test, and Docker build run in parallel
+2. If all pass, the deploy job SSHs into EC2
+3. Pulls latest code, rebuilds containers
+4. Restarts ngrok as a systemd service (auto-recovers on failure)
+5. Runs a health check to verify the deployment
+
+No manual SSH required for subsequent deployments.
+
+### Required GitHub Secrets
+
+| Secret | Description |
+|--------|-------------|
+| `EC2_SSH_KEY` | Contents of your `.pem` private key file |
+| `EC2_HOST` | EC2 public IP (use an Elastic IP for persistence) |
+| `EC2_USER` | SSH username (typically `ubuntu`) |
+
 ### Verify Deployment
-- Root: `https://your-domain.ngrok-free.app/`
-- Health: `https://your-domain.ngrok-free.app/api/health`
-- Dashboard: `https://your-domain.ngrok-free.app/dashboard`
-- API Docs: `https://your-domain.ngrok-free.app/docs`
+- Root: `https://your-ngrok-url/`
+- Health: `https://your-ngrok-url/api/health`
+- Dashboard: `https://your-ngrok-url/dashboard`
+- API Docs: `https://your-ngrok-url/docs`
 
 ## Project Structure
 
@@ -186,14 +208,23 @@ sears-home-task/
 │       ├── session_manager.py   # Conversation state management
 │       ├── agent.py             # AI agent (Samantha) with 8 tools
 │       └── realtime_handler.py  # OpenAI Realtime API + dashboard broadcast
-├── tests/
-│   ├── test_voice_agent.py      # Agent tool tests
-│   ├── test_services.py         # Service layer tests
-│   ├── test_api.py              # API endpoint tests
+├── tests/                           # 227 tests, 83% coverage
+│   ├── test_voice_agent.py          # Agent tool tests
+│   ├── test_agent_tools_extended.py # book, image upload, update customer
+│   ├── test_voice_api.py           # Voice webhook endpoint tests
+│   ├── test_realtime_handler.py    # Broadcast, cleanup, live transfer
+│   ├── test_services.py            # Service layer tests
+│   ├── test_sms_and_email_extended.py # SMS and email service tests
+│   ├── test_customer_history.py    # Customer history + scheduling
+│   ├── test_seed_data.py           # Seed data and time slot refresh
+│   ├── test_routes_extended.py     # Full CRUD route tests
+│   ├── test_dashboard.py           # Dashboard page tests
+│   ├── test_main_extended.py       # Root and config endpoint tests
+│   ├── test_api.py                 # API endpoint tests
 │   └── ...
 ├── .github/
 │   └── workflows/
-│       └── ci.yml               # CI pipeline (lint + test + Docker build)
+│       └── ci.yml               # CI/CD pipeline (lint + test + Docker build + EC2 deploy)
 ├── docker-compose.yml
 ├── Dockerfile
 ├── requirements.txt
@@ -278,41 +309,28 @@ git push to main
        │                        isort --check . (import ordering)
        │                        flake8 (style / unused imports)
        │
-       ├── Test Job ──────────▶ pytest --cov=app (unit tests + coverage)
+       ├── Test Job ──────────▶ pytest --cov=app (227 tests, 83% coverage)
        │                        Uploads coverage-report artifact
        │
-       └── Docker Build Job ──▶ docker build -t sears-voice-ai:test .
-                                Validates image builds successfully
+       ├── Docker Build Job ──▶ docker build -t sears-voice-ai:test .
+       │                        Validates image builds successfully
+       │
+       └── Deploy Job ────────▶ SSH into EC2 (only on main push)
+            (needs all above)    git pull + docker compose rebuild
+                                 Restart ngrok systemd service
+                                 Health check verification
 ```
 
-### CI Jobs Detail
+### CI/CD Jobs Detail
 
-| Job | Runtime | What It Checks |
-|-----|---------|----------------|
+| Job | Runtime | What It Does |
+|-----|---------|--------------|
 | **Lint** | ~25s | Code formatting (black), import order (isort), style rules (flake8) |
-| **Test** | ~35s | All unit tests with `pytest`, generates XML coverage report |
+| **Test** | ~35s | 227 unit tests with `pytest`, 83% coverage, generates XML report |
 | **Docker Build** | ~50s | Full Docker image build to catch dependency or build issues |
+| **Deploy** | ~3min | Auto-deploys to EC2 via SSH after all checks pass (main branch only) |
 
-All three jobs run in parallel on `ubuntu-latest` with Python 3.12.
-
-### Deployment to EC2
-
-After CI passes, deployment to the EC2 production server is done via SSH:
-
-```bash
-# SSH into EC2
-ssh -i your-key.pem ubuntu@<EC2-PUBLIC-IP>
-
-# Pull latest changes and rebuild
-cd sears-home-task
-git pull origin main
-docker compose down
-docker compose up -d --build
-
-# Verify
-docker compose ps
-curl http://localhost:8000/api/health
-```
+Lint, Test, and Docker Build run in parallel on `ubuntu-latest` with Python 3.12. Deploy runs sequentially after all three succeed.
 
 ### Code Quality Tools
 
@@ -341,12 +359,26 @@ curl http://localhost:8000/api/health
 ## Testing
 
 ```bash
-# Run all tests with coverage
+# Run all tests with coverage (227 tests, 83% coverage)
 pytest --cov=app --cov-report=term-missing -v
 
 # Run specific test file
 pytest tests/test_voice_agent.py -v
 ```
+
+### Coverage Highlights
+
+| Module | Coverage |
+|--------|----------|
+| Config, Models, Schemas | 94-100% |
+| Voice Agent (tools, prompt) | 96% |
+| Session Manager | 100% |
+| Scheduling Service | 94% |
+| Customer Service | 94% |
+| API Routes | 97% |
+| Email / SMS Services | 82-87% |
+| Seed Data | 85% |
+| **Overall** | **83%** |
 
 ## Security Notes
 
