@@ -97,9 +97,7 @@ class TestLiveTransfer:
         mock_calls = MagicMock()
         mock_client.calls.return_value = mock_calls
 
-        with patch(
-            "app.voice.realtime_handler.asyncio.sleep", new_callable=AsyncMock
-        ):
+        with patch("app.voice.realtime_handler.asyncio.sleep", new_callable=AsyncMock):
             with patch(
                 "app.voice.realtime_handler.Client", mock_client_cls, create=True
             ):
@@ -115,9 +113,7 @@ class TestLiveTransfer:
                         pass
 
         # Simpler approach: just verify it doesn't crash with missing twilio
-        with patch(
-            "app.voice.realtime_handler.asyncio.sleep", new_callable=AsyncMock
-        ):
+        with patch("app.voice.realtime_handler.asyncio.sleep", new_callable=AsyncMock):
             await handler._execute_live_transfer(
                 "CA_test_xfer", "general_support", "normal"
             )
@@ -125,12 +121,8 @@ class TestLiveTransfer:
     @pytest.mark.asyncio
     async def test_live_transfer_emergency(self, handler):
         """Emergency transfer executes without error."""
-        with patch(
-            "app.voice.realtime_handler.asyncio.sleep", new_callable=AsyncMock
-        ):
-            await handler._execute_live_transfer(
-                "CA_emrg", "emergency", "emergency"
-            )
+        with patch("app.voice.realtime_handler.asyncio.sleep", new_callable=AsyncMock):
+            await handler._execute_live_transfer("CA_emrg", "emergency", "emergency")
 
 
 class TestHandleToolCall:
@@ -165,9 +157,7 @@ class TestHandleToolCall:
         await handler._handle_tool_call(event, mock_twilio_ws)
 
         assert handler.openai_ws.send.call_count >= 2
-        calls = [
-            json.loads(c[0][0]) for c in handler.openai_ws.send.call_args_list
-        ]
+        calls = [json.loads(c[0][0]) for c in handler.openai_ws.send.call_args_list]
         types = [c["type"] for c in calls]
         assert "conversation.item.create" in types
         assert "response.create" in types

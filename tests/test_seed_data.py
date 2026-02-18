@@ -79,7 +79,9 @@ class TestRefreshTimeSlots:
         db_session.commit()
 
         refresh_time_slots(db_session)
-        slots = db_session.query(TimeSlot).filter(TimeSlot.technician_id == tech.id).all()
+        slots = (
+            db_session.query(TimeSlot).filter(TimeSlot.technician_id == tech.id).all()
+        )
         assert len(slots) > 0
 
 
